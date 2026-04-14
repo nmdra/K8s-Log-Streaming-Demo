@@ -11,7 +11,7 @@ A complete end-to-end log streaming pipeline running on Kubernetes:
 ```
 ┌─────────────┐    stdout     ┌─────────┐   kafka topics   ┌──────────────┐
 │  Go App     │ ──────────►  │ Fluentd │ ───────────────► │ Kafka        │
-│ (order-svc) │              │ DaemonSet│                  │ (Strimzi)    │
+│ (order-svc) │              │ DaemonSet│                  │ (Strimzi KRaft)│
 └─────────────┘              └─────────┘                  └──────┬───────┘
                                                                   │
                                                            ┌──────▼───────┐
@@ -31,7 +31,7 @@ A complete end-to-end log streaming pipeline running on Kubernetes:
 |-----------|------|
 | **Go App** | Generates structured JSON logs via REST endpoints |
 | **Fluentd** | DaemonSet that tails container logs and forwards to Kafka |
-| **Kafka (Strimzi)** | Buffers and streams logs across two topics |
+| **Kafka (Strimzi KRaft)** | Buffers and streams logs across two topics |
 | **Go Consumer** | Reads Kafka topics and indexes documents into Elasticsearch |
 | **Elasticsearch** | Stores and indexes log documents |
 | **Kibana** | Visualizes logs with dashboards and KQL queries |
@@ -110,7 +110,7 @@ curl http://localhost:8080/health
 curl http://localhost:8080/orders
 ```
 
-### 5. Deploy Kafka (Strimzi)
+### 5. Deploy Kafka (Strimzi KRaft)
 
 Install the Strimzi operator:
 ```bash
@@ -296,7 +296,7 @@ kubectl logs -n logging -l app=fluentd
 
 # Verify Kafka bootstrap is reachable from within the cluster
 kubectl run -it --rm debug --image=busybox --restart=Never -n logging -- \
-  nc -z kafka-bootstrap.kafka.svc.cluster.local 9092 && echo "Kafka reachable"
+  nc -z log-cluster-kafka-bootstrap.kafka.svc.cluster.local 9092 && echo "Kafka reachable"
 ```
 
 ### Consumer not indexing to Elasticsearch

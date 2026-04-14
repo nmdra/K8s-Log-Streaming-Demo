@@ -1,4 +1,4 @@
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: app-logs
@@ -12,7 +12,7 @@ spec:
     retention.ms: 86400000   # 1 day
     segment.bytes: 104857600 # 100 MiB
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaTopic
 metadata:
   name: error-logs

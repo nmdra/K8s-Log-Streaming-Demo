@@ -26,7 +26,7 @@ spec:
             - sh
             - -c
             - |
-              until nc -z kafka-bootstrap.kafka.svc.cluster.local 9092; do
+              until nc -z log-cluster-kafka-bootstrap.kafka.svc.cluster.local 9092; do
                 echo "Waiting for Kafka..."; sleep 5;
               done
       containers:
@@ -34,7 +34,7 @@ spec:
           image: fluent/fluentd-kubernetes-daemonset:v1-debian-kafka
           env:
             - name: FLUENT_KAFKA_BROKERS
-              value: kafka-bootstrap.kafka.svc.cluster.local:9092
+              value: log-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092
             - name: FLUENT_KAFKA_DEFAULT_TOPIC
               value: app-logs
             - name: FLUENTD_SYSTEMD_CONF

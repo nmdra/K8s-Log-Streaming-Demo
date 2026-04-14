@@ -156,7 +156,7 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 func main() {
 	broker := os.Getenv("KAFKA_BROKER")
 	if broker == "" {
-		broker = "kafka-bootstrap.kafka.svc.cluster.local:9092"
+		broker = "log-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
 	}
 
 	esAddress := os.Getenv("ES_ADDRESS")
