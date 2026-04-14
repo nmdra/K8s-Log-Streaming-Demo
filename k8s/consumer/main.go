@@ -45,8 +45,7 @@ func newESClient(address, username, password, caCert string) (*ESClient, error) 
 		}
 		tlsCfg.RootCAs = pool
 	} else {
-		// For local dev: accept any cert (not for production)
-		tlsCfg.InsecureSkipVerify = true //nolint:gosec
+		return nil, fmt.Errorf("ES_CACERT is required; provide the Elasticsearch CA certificate")
 	}
 
 	return &ESClient{

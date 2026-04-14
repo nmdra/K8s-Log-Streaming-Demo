@@ -37,13 +37,6 @@ data:
         pattern /.*/
         tag     kafka.app
       </rule>
-      # Default: treat records without a level field as app logs
-      <rule>
-        key     level
-        pattern /^$/
-        tag     kafka.app
-        invert  true
-      </rule>
     </match>
 
     # ── Forward error logs → error-logs topic ────────────────────────────────
