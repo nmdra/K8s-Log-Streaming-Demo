@@ -53,8 +53,8 @@ spec:
             - name: ES_CACERT
               valueFrom:
                 secretKeyRef:
-                  name: elasticsearch-es-http-certs-public
-                  key: tls.crt
+                  name: elasticsearch-es-http-ca-public
+                  key: ca.crt
           resources:
             requests:
               cpu: 100m
