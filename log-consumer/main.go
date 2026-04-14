@@ -60,14 +60,14 @@ func newESClient(address, username, password, caCert string) (*ESClient, error) 
 	}, nil
 }
 
-func (es *ESClient) indexDocument(index string, doc map[string]interface{}) error {
+func (es *ESClient) indexDocument(ctx context.Context, index string, doc map[string]interface{}) error {
 	body, err := json.Marshal(doc)
 	if err != nil {
 		return fmt.Errorf("marshal document: %w", err)
 	}
 
 	url := fmt.Sprintf("%s/%s/_doc", es.address, index)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}
@@ -172,7 +172,7 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 
 		backoff := time.Second
 		for {
-			if err := esClient.indexDocument(index, doc); err != nil {
+			if err := esClient.indexDocument(ctx, index, doc); err != nil {
 				log.Error().
 					Err(err).
 					Str("topic", topic).
