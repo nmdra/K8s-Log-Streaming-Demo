@@ -7,8 +7,8 @@
 *.dll
 *.so
 *.dylib
-go-app/log-producer
-k8s/consumer/log-consumer
+log-producer/log-producer
+log-consumer/log-consumer
 
 # Test binary, built with `go test -c`
 *.test

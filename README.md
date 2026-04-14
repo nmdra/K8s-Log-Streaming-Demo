@@ -38,6 +38,23 @@ A complete end-to-end log streaming pipeline running on Kubernetes:
 
 ---
 
+## Repository Structure
+
+```text
+log-producer/   # Go producer service (own go.mod, Dockerfile, GoReleaser)
+log-consumer/   # Go consumer service (own go.mod, Dockerfile, GoReleaser)
+k8s/            # Kubernetes manifests
+```
+
+## CI/CD
+
+- Producer workflow: `.github/workflows/producer.yml` (triggers on `log-producer/**`)
+- Consumer workflow: `.github/workflows/consumer.yml` (triggers on `log-consumer/**`)
+- Both workflows use:
+  - GoReleaser `v2.15.0`
+  - Trivy filesystem scanning
+  - tag-based release (`producer-v*`, `consumer-v*`)
+
 ## Prerequisites
 
 | Tool | Version | Install |
@@ -82,12 +99,12 @@ kubectl create namespace logging
 
 ```bash
 # Log producer
-cd go-app
+cd log-producer
 docker build -t log-producer:latest .
 kind load docker-image log-producer:latest --name log-stream
 
 # Log consumer
-cd ../k8s/consumer
+cd ../log-consumer
 docker build -t log-consumer:latest .
 kind load docker-image log-consumer:latest --name log-stream
 cd ../..
@@ -342,4 +359,4 @@ Always deploy in this order to avoid dependency failures:
 4. Kafka / Strimzi (`k8s/kafka/`)
 5. Fluentd (`k8s/fluentd/`) — needs Kafka to be ready
 6. Elasticsearch + Kibana (`k8s/elk/`)
-7. Consumer (`k8s/consumer/`) — needs both Kafka and Elasticsearch
+7. Consumer app (`log-consumer/`) + consumer deployment (`k8s/consumer/`) — needs both Kafka and Elasticsearch
