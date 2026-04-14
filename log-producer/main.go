@@ -59,14 +59,6 @@ func randomFloat64() float64 {
 	return rng.Float64()
 }
 
-func withRequestLog(next func(w http.ResponseWriter, r *http.Request, requestID string, start time.Time)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		requestID := uuid.New().String()
-		start := time.Now()
-		next(w, r, requestID, start)
-	}
-}
-
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
