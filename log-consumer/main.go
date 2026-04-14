@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -36,7 +37,7 @@ type ESClient struct {
 }
 
 func newESClient(address, username, password, caCert string) (*ESClient, error) {
-	tlsCfg := &tls.Config{}
+	tlsCfg := &tls.Config{MinVersion: tls.VersionTLS12}
 
 	if caCert != "" {
 		pool := x509.NewCertPool()
@@ -78,6 +79,9 @@ func (es *ESClient) indexDocument(index string, doc map[string]interface{}) erro
 		return fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		return fmt.Errorf("read response body: %w", err)
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("unexpected status %d", resp.StatusCode)
@@ -105,7 +109,7 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 	log.Info().Str("topic", topic).Str("event", "consumer_started").Msg("")
 
 	for {
-		msg, err := r.ReadMessage(ctx)
+		msg, err := r.FetchMessage(ctx)
 		if err != nil {
 			if ctx.Err() != nil {
 				log.Info().Str("topic", topic).Str("event", "consumer_stopped").Msg("")
@@ -117,12 +121,21 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 
 		var doc map[string]interface{}
 		if err := json.Unmarshal(msg.Value, &doc); err != nil {
+			raw := string(msg.Value)
+			if len(raw) > 256 {
+				raw = raw[:256] + "...(truncated)"
+			}
 			log.Warn().
 				Err(err).
 				Str("topic", topic).
+				Int("partition", msg.Partition).
+				Int64("offset", msg.Offset).
 				Str("event", "unmarshal_error").
-				Str("raw", string(msg.Value)).
+				Str("raw_preview", raw).
 				Msg("")
+			if err := r.CommitMessages(ctx, msg); err != nil && ctx.Err() == nil {
+				log.Error().Err(err).Str("topic", topic).Int("partition", msg.Partition).Int64("offset", msg.Offset).Str("event", "commit_error").Msg("")
+			}
 			continue
 		}
 
@@ -138,8 +151,25 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 			log.Error().
 				Err(err).
 				Str("topic", topic).
+				Int("partition", msg.Partition).
+				Int64("offset", msg.Offset).
 				Str("index", index).
 				Str("event", "index_error").
+				Msg("")
+			continue
+		}
+
+		if err := r.CommitMessages(ctx, msg); err != nil {
+			if ctx.Err() != nil {
+				log.Info().Str("topic", topic).Str("event", "consumer_stopped").Msg("")
+				return
+			}
+			log.Error().
+				Err(err).
+				Str("topic", topic).
+				Int("partition", msg.Partition).
+				Int64("offset", msg.Offset).
+				Str("event", "commit_error").
 				Msg("")
 			continue
 		}

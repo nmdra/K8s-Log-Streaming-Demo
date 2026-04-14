@@ -17,6 +17,7 @@ var log zerolog.Logger
 
 func init() {
 	zerolog.TimeFieldFormat = time.RFC3339
+	rand.Seed(time.Now().UnixNano())
 	log = zerolog.New(os.Stdout).With().
 		Str("service", "order-service").
 		Timestamp().
