@@ -63,7 +63,7 @@ k8s/            # Kubernetes manifests
 | Docker | ≥ 24 | https://docs.docker.com/get-docker/ |
 | kubectl | ≥ 1.28 | https://kubernetes.io/docs/tasks/tools/ |
 | kind | ≥ 0.22 | https://kind.sigs.k8s.io/docs/user/quick-start/ |
-| Go | ≥ 1.22 | https://go.dev/dl/ |
+| Go | ≥ 1.26.1 | https://go.dev/dl/ |
 | Helm | ≥ 3 | https://helm.sh/docs/intro/install/ |
 | kcat | any | https://github.com/edenhill/kcat |
 
