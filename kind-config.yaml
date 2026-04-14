@@ -11,10 +11,4 @@ nodes:
         hostPort: 5601
         protocol: TCP
   - role: worker
-    extraMounts:
-      - hostPath: /var/log
-        containerPath: /var/log
   - role: worker
-    extraMounts:
-      - hostPath: /var/log
-        containerPath: /var/log
