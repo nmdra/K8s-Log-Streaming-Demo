@@ -170,16 +170,40 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 
 		index := "logs-" + now.Format("2006.01.02")
 
-		if err := esClient.indexDocument(index, doc); err != nil {
-			log.Error().
-				Err(err).
-				Str("topic", topic).
-				Int("partition", msg.Partition).
-				Int64("offset", msg.Offset).
-				Str("index", index).
-				Str("event", "index_error").
-				Msg("")
-			continue
+		backoff := time.Second
+		for {
+			if err := esClient.indexDocument(index, doc); err != nil {
+				log.Error().
+					Err(err).
+					Str("topic", topic).
+					Int("partition", msg.Partition).
+					Int64("offset", msg.Offset).
+					Str("index", index).
+					Dur("retry_in", backoff).
+					Str("event", "index_error").
+					Msg("")
+
+				select {
+				case <-ctx.Done():
+					log.Info().
+						Str("topic", topic).
+						Int("partition", msg.Partition).
+						Int64("offset", msg.Offset).
+						Str("event", "consumer_stopped").
+						Msg("")
+					return
+				case <-time.After(backoff):
+				}
+
+				if backoff < 30*time.Second {
+					backoff *= 2
+					if backoff > 30*time.Second {
+						backoff = 30 * time.Second
+					}
+				}
+				continue
+			}
+			break
 		}
 
 		if !commitMessage(ctx, r, topic, msg) {
