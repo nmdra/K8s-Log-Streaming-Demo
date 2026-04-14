@@ -53,6 +53,7 @@ k8s/            # Kubernetes manifests
 - Both workflows use:
   - GoReleaser `v2.15.0`
   - Trivy filesystem scanning
+  - GHCR image publishing (`ghcr.io/<owner>/<service>`)
   - tag-based release (`producer-v*`, `consumer-v*`)
 
 ## Prerequisites
