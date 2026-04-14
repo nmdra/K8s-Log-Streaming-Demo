@@ -79,14 +79,37 @@ func (es *ESClient) indexDocument(index string, doc map[string]interface{}) erro
 		return fmt.Errorf("send request: %w", err)
 	}
 	defer resp.Body.Close()
-	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
 		return fmt.Errorf("read response body: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("unexpected status %d", resp.StatusCode)
+		bodyPreview := string(respBody)
+		if len(bodyPreview) > 256 {
+			bodyPreview = bodyPreview[:256] + "...(truncated)"
+		}
+		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, bodyPreview)
 	}
 	return nil
+}
+
+func commitMessage(ctx context.Context, r *kafka.Reader, topic string, msg kafka.Message) bool {
+	if err := r.CommitMessages(ctx, msg); err != nil {
+		if ctx.Err() != nil {
+			log.Info().Str("topic", topic).Str("event", "consumer_stopped").Msg("")
+			return false
+		}
+		log.Error().
+			Err(err).
+			Str("topic", topic).
+			Int("partition", msg.Partition).
+			Int64("offset", msg.Offset).
+			Str("event", "commit_error").
+			Msg("")
+		return true
+	}
+	return true
 }
 
 func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient, wg *sync.WaitGroup) {
@@ -133,8 +156,8 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 				Str("event", "unmarshal_error").
 				Str("raw_preview", raw).
 				Msg("")
-			if err := r.CommitMessages(ctx, msg); err != nil && ctx.Err() == nil {
-				log.Error().Err(err).Str("topic", topic).Int("partition", msg.Partition).Int64("offset", msg.Offset).Str("event", "commit_error").Msg("")
+			if !commitMessage(ctx, r, topic, msg) {
+				return
 			}
 			continue
 		}
@@ -159,19 +182,8 @@ func consumeTopic(ctx context.Context, broker, topic string, esClient *ESClient,
 			continue
 		}
 
-		if err := r.CommitMessages(ctx, msg); err != nil {
-			if ctx.Err() != nil {
-				log.Info().Str("topic", topic).Str("event", "consumer_stopped").Msg("")
-				return
-			}
-			log.Error().
-				Err(err).
-				Str("topic", topic).
-				Int("partition", msg.Partition).
-				Int64("offset", msg.Offset).
-				Str("event", "commit_error").
-				Msg("")
-			continue
+		if !commitMessage(ctx, r, topic, msg) {
+			return
 		}
 
 		log.Info().

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,10 +15,11 @@ import (
 )
 
 var log zerolog.Logger
+var rng = rand.New(rand.NewSource(time.Now().UnixNano()))
+var rngMu sync.Mutex
 
 func init() {
 	zerolog.TimeFieldFormat = time.RFC3339
-	rand.Seed(time.Now().UnixNano())
 	log = zerolog.New(os.Stdout).With().
 		Str("service", "order-service").
 		Timestamp().
@@ -38,11 +40,23 @@ var statuses = []string{"pending", "processing", "shipped", "delivered"}
 func randomOrder() Order {
 	return Order{
 		ID:       uuid.New().String(),
-		Item:     items[rand.Intn(len(items))],
-		Quantity: rand.Intn(5) + 1,
-		Price:    float64(rand.Intn(90000)+1000) / 100,
-		Status:   statuses[rand.Intn(len(statuses))],
+		Item:     items[randomIntn(len(items))],
+		Quantity: randomIntn(5) + 1,
+		Price:    float64(randomIntn(90000)+1000) / 100,
+		Status:   statuses[randomIntn(len(statuses))],
 	}
+}
+
+func randomIntn(n int) int {
+	rngMu.Lock()
+	defer rngMu.Unlock()
+	return rng.Intn(n)
+}
+
+func randomFloat64() float64 {
+	rngMu.Lock()
+	defer rngMu.Unlock()
+	return rng.Float64()
 }
 
 func withRequestLog(next func(w http.ResponseWriter, r *http.Request, requestID string, start time.Time)) http.HandlerFunc {
@@ -63,7 +77,7 @@ func listOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	requestID := uuid.New().String()
 	start := time.Now()
 
-	orders := make([]Order, rand.Intn(5)+1)
+	orders := make([]Order, randomIntn(5)+1)
 	for i := range orders {
 		orders[i] = randomOrder()
 	}
@@ -88,7 +102,7 @@ func getOrderHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	// 10% chance → 404 error
-	if rand.Float64() < 0.10 {
+	if randomFloat64() < 0.10 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "order not found"})
@@ -106,8 +120,8 @@ func getOrderHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 15% chance → slow response
-	if rand.Float64() < 0.15 {
-		delay := time.Duration(rand.Intn(1500)+500) * time.Millisecond
+	if randomFloat64() < 0.15 {
+		delay := time.Duration(randomIntn(1500)+500) * time.Millisecond
 		time.Sleep(delay)
 
 		log.Warn().
@@ -168,7 +182,7 @@ func getPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	// 20% chance → payment failure
-	if rand.Float64() < 0.20 {
+	if randomFloat64() < 0.20 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusPaymentRequired)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "payment failed"})
@@ -190,7 +204,7 @@ func getPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"payment_id": id,
 		"status":     "success",
-		"amount":     float64(rand.Intn(50000)+500) / 100,
+		"amount":     float64(randomIntn(50000)+500) / 100,
 	})
 
 	log.Info().
