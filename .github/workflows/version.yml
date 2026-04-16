@@ -1,0 +1,102 @@
+name: auto-version
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: auto-version-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  tag-services:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for service changes
+        id: changes
+        run: |
+          FILES="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || true)"
+          if [ -z "$FILES" ]; then
+            FILES="$(git show --name-only --pretty='' "${{ github.sha }}")"
+          fi
+
+          if echo "$FILES" | grep -q '^log-producer/'; then
+            echo "producer_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "producer_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if echo "$FILES" | grep -q '^log-consumer/'; then
+            echo "consumer_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "consumer_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate next producer version
+        if: steps.changes.outputs.producer_changed == 'true'
+        id: version
+        run: |
+          TAG="$(git tag --list 'producer-v*' --sort=-v:refname | head -n1)"
+          TAG="${TAG:-producer-v0.0.0}"
+          VERSION="${TAG#producer-v}"
+
+          MAJOR="$(echo "$VERSION" | cut -d. -f1)"
+          MINOR="$(echo "$VERSION" | cut -d. -f2)"
+          PATCH="$(echo "$VERSION" | cut -d. -f3)"
+
+          PATCH="$((PATCH+1))"
+          NEW_TAG="producer-v$MAJOR.$MINOR.$PATCH"
+
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Push producer tag
+        if: steps.changes.outputs.producer_changed == 'true'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git fetch --tags
+          REMOTE_TAG="$(git ls-remote --tags origin "refs/tags/$TAG")"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>/dev/null || [ -n "$REMOTE_TAG" ]; then
+            echo "Tag $TAG already exists, skipping producer tag push."
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
+
+      - name: Generate next consumer version
+        if: steps.changes.outputs.consumer_changed == 'true'
+        id: consumer_version
+        run: |
+          TAG="$(git tag --list 'consumer-v*' --sort=-v:refname | head -n1)"
+          TAG="${TAG:-consumer-v0.0.0}"
+          VERSION="${TAG#consumer-v}"
+
+          MAJOR="$(echo "$VERSION" | cut -d. -f1)"
+          MINOR="$(echo "$VERSION" | cut -d. -f2)"
+          PATCH="$(echo "$VERSION" | cut -d. -f3)"
+
+          PATCH="$((PATCH+1))"
+          NEW_TAG="consumer-v$MAJOR.$MINOR.$PATCH"
+
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Push consumer tag
+        if: steps.changes.outputs.consumer_changed == 'true'
+        run: |
+          TAG="${{ steps.consumer_version.outputs.tag }}"
+          git fetch --tags
+          REMOTE_TAG="$(git ls-remote --tags origin "refs/tags/$TAG")"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null 2>/dev/null || [ -n "$REMOTE_TAG" ]; then
+            echo "Tag $TAG already exists, skipping consumer tag push."
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"

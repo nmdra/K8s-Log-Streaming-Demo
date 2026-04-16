@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  pull_request:
+    paths:
+      - "log-producer/**"
+      - "log-consumer/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/go-service.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "log-producer/**"
+      - "log-consumer/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/go-service.yml"
+    tags:
+      - "producer-v*"
+      - "consumer-v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: log-producer
+            tag_prefix: producer-v
+          - service: log-consumer
+            tag_prefix: consumer-v
+
+    uses: ./.github/workflows/go-service.yml
+    with:
+      service: ${{ matrix.service }}
+      tag_prefix: ${{ matrix.tag_prefix }}

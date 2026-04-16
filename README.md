@@ -48,13 +48,15 @@ k8s/            # Kubernetes manifests
 
 ## CI/CD
 
-- Producer workflow: `.github/workflows/producer.yml` (triggers on `log-producer/**`)
-- Consumer workflow: `.github/workflows/consumer.yml` (triggers on `log-consumer/**`)
-- Both workflows use:
+- Reusable workflow: `.github/workflows/go-service.yml`
+- Matrix CI workflow: `.github/workflows/ci.yml` (runs producer and consumer in parallel)
+- Auto-version workflow: `.github/workflows/version.yml` (bumps `producer-v*` and `consumer-v*` tags on `main` when service files change)
+- CI/release pipeline includes:
+  - Go tests
+  - `golangci-lint`
+  - Trivy filesystem scanning (`HIGH,CRITICAL`)
   - GoReleaser `v2.15.0`
-  - Trivy filesystem scanning
   - GHCR image publishing (`ghcr.io/<owner>/<service>`)
-  - tag-based release (`producer-v*`, `consumer-v*`)
 
 ## Prerequisites
 
