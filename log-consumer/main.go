@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/segmentio/kafka-go"
+	kafka "github.com/segmentio/kafka-go"
 )
 
 var log zerolog.Logger
