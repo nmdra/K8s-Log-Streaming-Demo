@@ -62,8 +62,9 @@ jobs:
         if: steps.changes.outputs.producer_changed == 'true'
         run: |
           TAG="${{ steps.version.outputs.tag }}"
-          git fetch --force --tags
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+          git fetch --tags
+          REMOTE_TAG="$(git ls-remote --tags origin "refs/tags/$TAG")"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || [ -n "$REMOTE_TAG" ]; then
             echo "Tag $TAG already exists, skipping producer tag push."
             exit 0
           fi
@@ -91,8 +92,9 @@ jobs:
         if: steps.changes.outputs.consumer_changed == 'true'
         run: |
           TAG="${{ steps.consumer_version.outputs.tag }}"
-          git fetch --force --tags
-          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+          git fetch --tags
+          REMOTE_TAG="$(git ls-remote --tags origin "refs/tags/$TAG")"
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || [ -n "$REMOTE_TAG" ]; then
             echo "Tag $TAG already exists, skipping consumer tag push."
             exit 0
           fi
