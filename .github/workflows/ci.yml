@@ -15,9 +15,6 @@ on:
       - "log-consumer/**"
       - ".github/workflows/ci.yml"
       - ".github/workflows/go-service.yml"
-    tags:
-      - "producer-v*"
-      - "consumer-v*"
 
 permissions:
   contents: read
@@ -30,11 +27,8 @@ jobs:
       matrix:
         include:
           - service: log-producer
-            tag_prefix: producer-v
           - service: log-consumer
-            tag_prefix: consumer-v
 
     uses: ./.github/workflows/go-service.yml
     with:
       service: ${{ matrix.service }}
-      tag_prefix: ${{ matrix.tag_prefix }}

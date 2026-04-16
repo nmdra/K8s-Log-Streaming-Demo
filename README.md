@@ -41,8 +41,8 @@ A complete end-to-end log streaming pipeline running on Kubernetes:
 ## Repository Structure
 
 ```text
-log-producer/   # Go producer service (own go.mod, Dockerfile, GoReleaser)
-log-consumer/   # Go consumer service (own go.mod, Dockerfile, GoReleaser)
+log-producer/   # Go producer service (own go.mod, Dockerfile)
+log-consumer/   # Go consumer service (own go.mod, Dockerfile)
 k8s/            # Kubernetes manifests
 ```
 
@@ -50,13 +50,10 @@ k8s/            # Kubernetes manifests
 
 - Reusable workflow: `.github/workflows/go-service.yml`
 - Matrix CI workflow: `.github/workflows/ci.yml` (runs producer and consumer in parallel)
-- Auto-version workflow: `.github/workflows/version.yml` (bumps `producer-v*` and `consumer-v*` tags on `main` when service files change)
 - CI/release pipeline includes:
-  - Go tests
-  - `golangci-lint`
-  - Trivy filesystem scanning (`HIGH,CRITICAL`)
-  - GoReleaser `v2.15.0`
-  - GHCR image publishing (`ghcr.io/<owner>/<service>`)
+  - Trivy filesystem scanning (`CRITICAL`)
+  - Docker Buildx image build and publish
+  - GHCR image tagging with commit SHA (`ghcr.io/<owner>/<service>:<commit-sha>`)
 
 ## Prerequisites
 
