@@ -52,6 +52,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v6
         with:
+          version: v1.59.1
           working-directory: ${{ inputs.service }}
 
       - name: Trivy filesystem scan
