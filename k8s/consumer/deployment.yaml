@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-consumer
+  namespace: logging
+  labels:
+    app: log-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-consumer
+  template:
+    metadata:
+      labels:
+        app: log-consumer
+    spec:
+      initContainers:
+        - name: wait-for-kafka
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z log-cluster-kafka-bootstrap.kafka.svc.cluster.local 9092; do
+                echo "Waiting for Kafka..."; sleep 5;
+              done
+        - name: wait-for-elasticsearch
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z elasticsearch-es-http.logging.svc.cluster.local 9200; do
+                echo "Waiting for Elasticsearch..."; sleep 5;
+              done
+      containers:
+        - name: log-consumer
+          image: log-consumer:latest
+          imagePullPolicy: Never
+          env:
+            - name: KAFKA_BROKER
+              value: log-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092
+            - name: ES_ADDRESS
+              value: https://elasticsearch-es-http.logging.svc:9200
+            - name: ES_USERNAME
+              value: elastic
+            - name: ES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-es-elastic-user
+                  key: elastic
+            - name: ES_CACERT
+              valueFrom:
+                secretKeyRef:
+                  name: elasticsearch-es-http-ca-public
+                  key: ca.crt
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi

@@ -1,0 +1,27 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: app-logs
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: log-cluster
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 86400000   # 1 day
+    segment.bytes: 104857600 # 100 MiB
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: error-logs
+  namespace: kafka
+  labels:
+    strimzi.io/cluster: log-cluster
+spec:
+  partitions: 3
+  replicas: 1
+  config:
+    retention.ms: 604800000  # 7 days
+    segment.bytes: 104857600 # 100 MiB

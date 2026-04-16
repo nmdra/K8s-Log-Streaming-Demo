@@ -1,0 +1,48 @@
+version: 2
+
+project_name: log-consumer
+
+release:
+  disable: true
+
+builds:
+  - id: log-consumer
+    main: .
+    binary: log-consumer
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+dockers:
+  - ids:
+      - log-consumer
+    use: buildx
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "{{ .Env.IMAGE_REPO }}:{{ .Version }}-amd64"
+      - "{{ .Env.IMAGE_REPO }}:latest-amd64"
+  - ids:
+      - log-consumer
+    use: buildx
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "{{ .Env.IMAGE_REPO }}:{{ .Version }}-arm64"
+      - "{{ .Env.IMAGE_REPO }}:latest-arm64"
+
+docker_manifests:
+  - name_template: "{{ .Env.IMAGE_REPO }}:{{ .Version }}"
+    image_templates:
+      - "{{ .Env.IMAGE_REPO }}:{{ .Version }}-amd64"
+      - "{{ .Env.IMAGE_REPO }}:{{ .Version }}-arm64"
+  - name_template: "{{ .Env.IMAGE_REPO }}:latest"
+    image_templates:
+      - "{{ .Env.IMAGE_REPO }}:latest-amd64"
+      - "{{ .Env.IMAGE_REPO }}:latest-arm64"
