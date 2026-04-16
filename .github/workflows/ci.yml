@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "producer-v*"
+      - "consumer-v*"
+
+jobs:
+  build:
+    if: |
+      github.event_name != 'push' ||
+      !startsWith(github.ref, 'refs/tags/') ||
+      startsWith(github.ref, format('refs/tags/{0}', matrix.tag_prefix))
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: log-producer
+            tag_prefix: producer-v
+          - service: log-consumer
+            tag_prefix: consumer-v
+
+    uses: ./.github/workflows/go-service.yml
+    with:
+      service: ${{ matrix.service }}
+      tag_prefix: ${{ matrix.tag_prefix }}

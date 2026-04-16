@@ -1,0 +1,100 @@
+name: auto-version
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag-producer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for producer changes
+        id: changes
+        run: |
+          FILES="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || true)"
+          if [ -z "$FILES" ]; then
+            FILES="$(git show --name-only --pretty='' "${{ github.sha }}")"
+          fi
+
+          if echo "$FILES" | grep -q '^log-producer/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate next producer version
+        if: steps.changes.outputs.changed == 'true'
+        id: version
+        run: |
+          TAG="$(git tag --list 'producer-v*' --sort=-v:refname | head -n1)"
+          TAG="${TAG:-producer-v0.0.0}"
+          VERSION="${TAG#producer-v}"
+
+          MAJOR="$(echo "$VERSION" | cut -d. -f1)"
+          MINOR="$(echo "$VERSION" | cut -d. -f2)"
+          PATCH="$(echo "$VERSION" | cut -d. -f3)"
+
+          PATCH="$((PATCH+1))"
+          NEW_TAG="producer-v$MAJOR.$MINOR.$PATCH"
+
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Push producer tag
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+  tag-consumer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for consumer changes
+        id: changes
+        run: |
+          FILES="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || true)"
+          if [ -z "$FILES" ]; then
+            FILES="$(git show --name-only --pretty='' "${{ github.sha }}")"
+          fi
+
+          if echo "$FILES" | grep -q '^log-consumer/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate next consumer version
+        if: steps.changes.outputs.changed == 'true'
+        id: version
+        run: |
+          TAG="$(git tag --list 'consumer-v*' --sort=-v:refname | head -n1)"
+          TAG="${TAG:-consumer-v0.0.0}"
+          VERSION="${TAG#consumer-v}"
+
+          MAJOR="$(echo "$VERSION" | cut -d. -f1)"
+          MINOR="$(echo "$VERSION" | cut -d. -f2)"
+          PATCH="$(echo "$VERSION" | cut -d. -f3)"
+
+          PATCH="$((PATCH+1))"
+          NEW_TAG="consumer-v$MAJOR.$MINOR.$PATCH"
+
+          echo "tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Push consumer tag
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"

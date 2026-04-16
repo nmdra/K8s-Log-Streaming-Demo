@@ -1,0 +1,87 @@
+name: go-service
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      tag_prefix:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.service }}
+
+    env:
+      IMAGE_REPO: ghcr.io/${{ github.repository_owner }}/${{ inputs.service }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ inputs.service }}/go.mod
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles(format('{0}/go.sum', inputs.service)) }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          working-directory: ${{ inputs.service }}
+
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.service }}
+          format: table
+          severity: HIGH,CRITICAL
+
+      - name: Set up Docker Buildx
+        if: startsWith(github.ref, format('refs/tags/{0}', inputs.tag_prefix))
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: startsWith(github.ref, format('refs/tags/{0}', inputs.tag_prefix))
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser
+        if: startsWith(github.ref, format('refs/tags/{0}', inputs.tag_prefix))
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: v2.15.0
+          distribution: goreleaser
+          workdir: ${{ inputs.service }}
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_REPO: ${{ env.IMAGE_REPO }}
