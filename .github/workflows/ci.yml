@@ -2,9 +2,19 @@ name: ci
 
 on:
   pull_request:
+    paths:
+      - "log-producer/**"
+      - "log-consumer/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/go-service.yml"
   push:
     branches:
       - main
+    paths:
+      - "log-producer/**"
+      - "log-consumer/**"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/go-service.yml"
     tags:
       - "producer-v*"
       - "consumer-v*"
