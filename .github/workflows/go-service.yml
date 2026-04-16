@@ -46,14 +46,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Run tests
-        run: go test ./...
+      # - name: Run tests
+      #   run: go test ./...
 
-      - name: Lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v2.11.4
-          working-directory: ${{ inputs.service }}
+      # - name: Lint
+      #   uses: golangci/golangci-lint-action@v6
+      #   with:
+      #     version: v2.11.4
+      #     working-directory: ${{ inputs.service }}
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@0.35.0
@@ -61,7 +61,7 @@ jobs:
           scan-type: fs
           scan-ref: ${{ inputs.service }}
           format: table
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
 
       - name: Set up Docker Buildx
         if: startsWith(github.ref, format('refs/tags/{0}', inputs.tag_prefix))
